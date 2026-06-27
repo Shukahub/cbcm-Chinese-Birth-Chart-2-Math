@@ -1,0 +1,16 @@
+[project]
+name = "cbcm-app-dateselect"
+version = "0.1.0"
+description = "择日应用库：在日历中按干支/五行关系筛选吉日（消费者，含经验断法）"
+requires-python = ">=3.11"
+dependencies = ["cbcm-core"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cbcm_dateselect"]
+
+[project.scripts]
+cbcm-dateselect = "cbcm_dateselect.__main__:main"

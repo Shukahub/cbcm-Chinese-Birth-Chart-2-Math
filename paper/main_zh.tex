@@ -1,0 +1,579 @@
+% 六十、五与二：八字的有限群形式化  （中文版）
+% Sukai <2396593357@qq.com>
+% 编译：xelatex main_zh.tex （跑两遍）
+
+\documentclass[11pt,a4paper,fontset=fandol]{ctexart}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc}
+\usepackage[super,sort&compress]{natbib}
+\usepackage[colorlinks=true,allcolors=blue]{hyperref}
+\usepackage{cleveref}
+
+\renewcommand{\proofname}{证明}
+
+\newtheorem{theorem}{定理}[section]
+\newtheorem{proposition}[theorem]{命题}
+\newtheorem{lemma}[theorem]{引理}
+\newtheorem{corollary}[theorem]{推论}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{定义}
+\theoremstyle{remark}
+\newtheorem*{remark}{注}
+\newtheorem*{note}{说明}
+
+% cleveref 中文化
+\crefname{theorem}{定理}{定理}
+\crefname{proposition}{命题}{命题}
+\crefname{corollary}{推论}{推论}
+\crefname{lemma}{引理}{引理}
+\crefname{figure}{图}{图}
+\crefname{table}{表}{表}
+\crefname{definition}{定义}{定义}
+\crefformat{section}{第#2#1#3节}
+
+\DeclareMathOperator{\lcm}{lcm}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\F}{\mathbb{F}}
+\newcommand{\ord}{\operatorname{ord}}
+\newcommand{\ke}{\mathsf{ke}}
+
+\title{\textbf{六十、五与二：\\ 八字的有限群形式化}}
+\author{Sukai\\ \texttt{2396593357@qq.com}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+我证明，被称为\emph{八字}（四柱）的中国传统命理/历法体系，连同其组成构件——十天干与十二地支（\emph{干支}）、带相生相克关系的\emph{五行}、以及《易经》的卦——可以干净地翻译为初等有限代数。六十甲子是循环群 $\Z_{60}$，实现为 $\Z_{10}\times\Z_{12}$ 的指数 $2$ 子群；五行的相生相克体系是单一的 $5$ 阶循环群 $C_5$，其中\emph{相克恰为相生之平方}；八卦与六十四卦是域 $\F_2$ 上的向量空间；算子层所用的各种关系（冲、合、三合、十神）则是对合、陪集分解与乘积映射。我给出从出生时刻到 $\Z_{60}^4$ 中一点的完整排盘映射 $\Phi$，包括日柱的闭式 $(\mathrm{JDN}+49)\bmod 60$。一条贯穿全文的元观察——\emph{骨架与装饰}——反复出现：能写成群运算的关系，恰是传统内部无争议的部分；而无法如此表达的外部查表，恰是各派长期争执的部分——并且随着时间，后者把主流让位给了前者。整套形式化以纯函数库实现，并由编码了各定理的属性测试、以及对独立日历库 $300$ 个随机日期的逐柱交叉验证所检验。我着重强调：形式化八字的\emph{逻辑}，并不等于验证其\emph{经验}预测；它只是首次让这些预测精确到可以被检验。
+\end{abstract}
+
+\newpage
+\section*{序：一个诚实的框架}
+若要认定一套知识算作科学，一条最小且被广泛接受的途径是三步：\emph{观察}一种规律、用某种语言将其\emph{形式化}、\emph{检验}该语言的预测。按此读法，"某种占算传统是否科学"这个陈旧问题，便分解为三个可独立回答的问题。
+
+本文只处理其中间那一步，对象是某一种占算实践。一千多年前，八字的实践者已用自己的符号语言——干、支、五行——完成了前两步。我不发明其内容；我用现代代数的语言将其重新形式化，并发现这一翻译出奇地忠实。八字是否真能预测关于人的什么，是一个经验问题，本文明确不予回答。我所主张的只是：经过这层翻译，该问题才首次成为良态的——逻辑被钉死，预测无歧义，事情可以交给统计学。无论读者先前信与不信，本文希望在这一意义上是有用的。
+
+\newpage
+\tableofcontents
+
+\newpage
+\section{引言}
+
+\subsection{翻译论点}
+中国命理的符号装置，是为编码其发明者所观察到的周期性而建造的：太阳年、木星的视运动、气候与季节的循环。缺乏现代数学记号的发明者，把这些周期编码成一套离散的、有名字的词汇——十干、十二支、五行、六十对配。本文的核心经验观察是：这套词汇并非任意，它是一个\emph{有限代数结构}，而且惊人地自洽。干是一个循环群，支是另一个，它们的合法配对是第三个，五行是第四个，卦则是向量空间。这些对象之间的关系——"冲""合""生""克"——是群论运算。
+
+我的任务只是翻译。我用代数对应物替换每个被命名的对象，用代数命题替换每条传统规则，并检查一无所失。其好处是通常的那些：代数精确、无歧义、可机械检验，免于纯文本传统所累积的解释漂移。一条贯穿全文、并于\cref{sec:skeleton}汇总的论点是：这种精确性能干净地把一个传统的\emph{结构骨架}（由代数所强制）与\emph{文化叠加的装饰}分离开来。
+
+\subsection{贡献}
+本文给出五条形式结果（各附简短证明）与一条元观察。
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{六十。} 干支配对的六十甲子循环是循环群 $\Z_{60}$，即 $\Z_{10}\times\Z_{12}$ 的指数 $2$ 子群 $G=\{(a,b):a\equiv b\pmod 2\}$；它由 $(1,1)$ 生成，阶为 $\lcm(10,12)=60$（\cref{thm:sexagenary}）。
+  \item \textbf{五。} 五行的相生（\emph{sheng}）相克（\emph{ke}）体系是单一循环群 $C_5$：在 $\Z_5$ 上定义 $\sigma(x)=x+1$，则\emph{相克即相生之平方}，$\ke=\sigma^2$（\cref{thm:wuxing}）。五行不受两条独立规则支配，而受一个循环的若干次幂。
+  \item \textbf{二。} 《易经》的八卦与六十四卦是向量空间 $\F_2^3$ 与 $\F_2^6$；古典的"变卦"操作（错、综、变）是 $\F_2$ 仿射对合（\cref{prop:yijing}）。
+  \item \textbf{排盘映射 $\Phi$。} 一张八字盘是 $\Z_{60}^4$ 中的一点。我给出从出生时刻到该点的 $\Phi$，包括日柱闭式 $(\mathrm{JDN}+49)\bmod 60$（\cref{thm:daypillar}），并证明两条古典"遁"法（五虎遁、五鼠遁）是干指标上同一个仿射映射 $x\mapsto 2x$。
+  \item \textbf{算子。} 十神映射透过 $\Z_5\times\Z_2$ 分解；地支三关系冲/合/害是 $\Z_{12}$ 的对合并带鲜明不变量；四个"三合局"是 $\langle 4\rangle\le\Z_{12}$ 的陪集，即商群 $\Z_{12}/\langle 4\rangle\cong\Z_4$（\cref{thm:involutions,thm:threeharmony}）。
+\end{enumerate}
+元观察（\cref{sec:skeleton}）是：能写成群运算的关系，恰是没有任何流派会去质疑的部分；而无法如此表达的关系，恰是长期被争执的部分——后者在几个世纪里把主流让位给了前者。于是形式化干净地把结构骨架从文化装饰中分离了出来。
+
+\subsection{范围与边界}
+我形式化的是八字的\emph{逻辑}。我不主张、不检验、也不背书任何形如"某种格局导致某种性格"的经验断言。这类断言住在本文之上一层（消费者层），明确在范围之外。本文的贡献在于：首次使这些断言足够无歧义、从而可被检验——一个为可证伪性准备的接口，而非一个判决。
+
+\subsection{相关前人工作}
+莱布尼茨曾著名地把六十四卦识别为二进制数~\cite{leibniz1703}。干支的历法结构见于标准汉学文献~\cite{smith2008,needham1959}，权威的历法转换算法见~\cite{dershowitz}。据我所知，此前没有工作把八字的内部"关系"（\cref{sec:operators}的算子层）重述为群论对象，也没有分离出\cref{sec:skeleton}的"骨架与装饰"之别。
+
+\section{预备与记号}\label{sec:prelim}
+记 $\Z_n=\Z/n\Z$ 为模 $n$ 整数的加法群（及环），$\F_2$ 为二元域 $\{0,1\}$，其加法为异或。群 $\Z_n$ 是 $n$ 阶\emph{循环群}；任一元 $g$ 生成子群 $\langle g\rangle=\{0,g,2g,\dots\}$，其大小为\emph{阶} $\ord(g)$，即最小正整数 $k$ 使 $kg\equiv0$。对 $g\in\Z_m\times\Z_n$ 有 $\ord(g)=\lcm(m',n')$，其中 $m',n'$ 为分量阶。子群 $H\le G$ 的\emph{陪集}是集合 $g+H$；陪集划分 $G$；当 $H$ 正规（交换群自动成立）时商群 $G/H$ 继承群结构。\emph{对合}是等于自身逆的映射。本文所用群论是标准的~\cite{dummitfoote}。
+
+\paragraph{索引约定。} 所有循环集从 $0$ 起编号，使运算干净：天干"甲"为 $0$，地支"子"为 $0$，五行"木"为 $0$，等等。名表仅在显示时查阅；代数只看整数。在此约定下\emph{奇偶即阴阳}：偶数索引为\emph{阳}，奇数索引为\emph{阴}。记 $\pi(x)=x\bmod 2\in\F_2$ 为奇偶（阴阳）纤维化。
+
+\section{干支：六十}\label{sec:ganzhi}
+
+\subsection{作为循环群的干支}
+\begin{definition}[干、支]
+\emph{天干}为 $\Z_{10}$ 的元素，\emph{地支}为 $\Z_{12}$ 的元素，名表见\cref{tab:names}。
+\end{definition}
+
+\begin{table}[h]\centering
+\caption{干（$\Z_{10}$）、支（$\Z_{12}$）、行（$\Z_5$），带奇偶类（偶$=$阳）。\label{tab:names}}
+\small
+\begin{tabular}{c|cccccccccccc}
+干索引 & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & & \\
+干 & 甲 & 乙 & 丙 & 丁 & 戊 & 己 & 庚 & 辛 & 壬 & 癸 & & \\
+行 & 木 & 木 & 火 & 火 & 土 & 土 & 金 & 金 & 水 & 水 & & \\ \midrule
+支索引 & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 \\
+支 & 子 & 丑 & 寅 & 卯 & 辰 & 巳 & 午 & 未 & 申 & 酉 & 戌 & 亥
+\end{tabular}
+\end{table}
+
+五行（木、火、土、金、水）即集合 $\Z_5$；该表也记录了满射 $\tau:\Z_{10}\to\Z_5$，$\tau(a)=\lfloor a/2\rfloor$，它是 $2$ 对 $1$ 的。
+
+\subsection{六十甲子群}
+\emph{干支对}是 $\Z_{10}\times\Z_{12}$ 中的元 $(a,b)$。在 $10\cdot 12=120$ 个可想象的配对中，传统只用六十。原因是代数的。
+\begin{definition}[六十甲子集]
+\emph{六十甲子集}为 $G=\{(a,b)\in\Z_{10}\times\Z_{12}:a\equiv b\pmod 2\}$。
+\end{definition}
+即干与支只在奇偶相同时配对——阳干配阳支、阴干配阴支。这是传统规则，如今是一条同余。
+
+\begin{theorem}[六十甲子群]\label{thm:sexagenary}
+$G$ 是 $\Z_{10}\times\Z_{12}$ 的 $60$ 阶子群，且 $G\cong\Z_{60}$。具体地，$G=\langle(1,1)\rangle$，$\ord\big((1,1)\big)=\lcm(10,12)=60$。
+\end{theorem}
+\begin{proof}
+映射 $\varphi:\Z_{10}\times\Z_{12}\to\Z_2$，$\varphi(a,b)=(a-b)\bmod 2$，是同态，且 $G=\ker\varphi$；故 $G$ 为子群。因 $|\Z_{10}\times\Z_{12}|=120$ 且 $|\operatorname{im}\varphi|=2$，得 $|G|=120/2=60$。
+
+令 $g=(1,1)$。$g$ 的阶为最小正整数 $k$ 使 $k\equiv0\pmod{10}$ 且 $k\equiv0\pmod{12}$，即 $\lcm(10,12)=60$。故 $\langle g\rangle$ 有 $60$ 元；因 $\langle g\rangle\subseteq G$ 且两者同阶，相等。由单元素生成的群是循环群，故 $G\cong\Z_{60}$。
+\end{proof}
+
+\begin{corollary}
+传统的"六十年循环"并非一个需要解释的经验事实：它就是 $\lcm(10,12)$。苍天或许供给了十与十二这两个因子；但它们的并，注定是六十。
+\end{corollary}
+
+\begin{remark}[$10$、$12$、$60$ 的宇宙论起源]
+两个周期并非任意。十干源自商代甲骨文上已见的十进制"周"；十二支被普遍认为追踪木星的视十二年周期（其恒星周期实为 $\approx11.86$ 年）。配对规则 $a\equiv b\pmod2$ 随即把合周期固定为 $\lcm(10,12)=60$——传统一向使用的数字。宇宙论的读法——干编码太阳/十进制节律、支编码木星节律——在此代数中，不过是"两个半周期互素的循环钟在同步运行"这一断言。
+\end{remark}
+
+等同 $G\cong\Z_{60}$ 由 $k\mapsto(k\bmod 10,\,k\bmod 12)$ 给出，故循环的第 $k$ 项（甲子$=0$，\dots，癸亥$=59$）由单一整数决定。
+
+\begin{figure}[h]\centering
+\begin{tikzpicture}[scale=0.52, every node/.style={font=\scriptsize}]
+\foreach \i in {0,...,9}{\foreach \j in {0,...,11}{%
+  \pgfmathtruncatemacro{\v}{mod(\i+\j,2)}%
+  \ifnum\v=0 \fill[blue!18] (\i,\j) rectangle (\i+1,\j+1); \fi}}
+\draw[thin] (0,0) grid (10,12);
+\foreach \i in {0,...,9} \node at (\i+0.5,12.45) {\i};
+\foreach \j in {0,...,11} \node at (-0.45,\j+0.5) {\j};
+\node[above,font=\small] at (5,12.4) {干索引 $a$};
+\node[rotate=90,font=\small] at (-1.3,6) {支索引 $b$};
+\end{tikzpicture}
+\caption{$10\times12$ 网格中的全部可想象干支对；其中 $60$ 个阴影格满足 $a\equiv b\pmod 2$，构成\cref{thm:sexagenary}的指数 $2$ 子群 $G\cong\Z_{60}$。棋盘格使"一半配对"的结构一目了然。}\label{fig:grid}
+\end{figure}
+
+\subsection{六旬与空亡}
+传统把循环分为六个\emph{旬}，每旬十项，各以干"甲"开头。六个开头索引构成子群 $\langle 10\rangle=\{0,10,20,30,40,50\}\cong\Z_6$。在旬首为 $h$ 的旬内，十干只配到十二支中的十支，余下两支为"空亡"。
+
+\begin{proposition}[空亡，闭式]\label{prop:vacancy}
+对日柱索引 $k\in\Z_{60}$（取其在 $\{0,\dots,59\}$ 中的规范代表元），旬首 $h=k-(k\bmod 10)$，两个空亡地支为
+\[
+\mathrm{vac}(k)=\{(h-2)\bmod 12,\;(h-1)\bmod 12\}.
+\]
+\end{proposition}
+\begin{proof}
+该旬覆盖位置 $h,h+1,\dots,h+9$，其支为 $\{(h+i)\bmod 12:0\le i\le 9\}$——$\Z_{12}$ 中十个相异剩余。未覆盖的两剩余恰为 $(h+10)\bmod 12$ 与 $(h+11)\bmod 12$，即 $(h-2)\bmod 12$ 与 $(h-1)\bmod 12$。
+\end{proof}
+
+\section{五行：五}\label{sec:wuxing}
+
+\subsection{相生与相克}
+五行 $\Z_5=\{\text{木},\text{火},\text{土},\text{金},\text{水}\}$ 带两条基本关系，传统上表述~\cite{hongfan}为两条独立规则：
+\begin{itemize}[leftmargin=*]
+\item \emph{相生}（\emph{sheng}）：木 $\to$ 火 $\to$ 土 $\to$ 金 $\to$ 水 $\to$ 木；
+\item \emph{相克}（\emph{ke}）：木 $\to$ 土 $\to$ 水 $\to$ 火 $\to$ 金 $\to$ 木。
+\end{itemize}
+
+\begin{definition}
+相生映射为 $\sigma:\Z_5\to\Z_5$，$\sigma(x)=x+1$。
+\end{definition}
+
+\begin{theorem}[相克即相生之平方]\label{thm:wuxing}
+定义 $\ke(x)$ 为 $x$ 所克之行。则 $\ke=\sigma^2$。故相生相克体系为循环群 $\langle\sigma\rangle\cong C_5\cong\Z_5$。
+\end{theorem}
+\begin{proof}
+$\sigma^2(x)=x+2$。读传统的相克表（木 $\to$ 土 $\to$ 水 $\to$ 火 $\to$ 金 $\to$ 木）得增量 $2,2,2,2,2\pmod 5$；故 $\ke(x)=x+2=\sigma^2(x)$。因 $\sigma$ 是 $5$-循环，$\langle\sigma\rangle=\{\mathrm{id},\sigma,\sigma^2,\sigma^3,\sigma^4\}$ 有五元，是 $5$ 阶循环群。
+\end{proof}
+
+\begin{remark}
+这是本文论点最干净的一例。把相生与相克当作两条独立口诀背诵的人，其实不知不觉把\emph{同一个}循环背了两遍。代数在此并非纠正传统，而是发现传统早就知道了。结构上，只有一条规则。
+\end{remark}
+
+\begin{figure}[h]\centering
+\begin{tikzpicture}[scale=1.15, >=Stealth, every node/.style={font=\small}]
+\coordinate (mu)   at (90:1.8);
+\coordinate (huo)  at (18:1.8);
+\coordinate (tu)   at (-54:1.8);
+\coordinate (jin)  at (-126:1.8);
+\coordinate (shui) at (162:1.8);
+\foreach \p in {mu,huo,tu,jin,shui} \fill (\p) circle (1.5pt);
+\draw[blue,thick,->] (mu) -- (huo);
+\draw[blue,thick,->] (huo) -- (tu);
+\draw[blue,thick,->] (tu) -- (jin);
+\draw[blue,thick,->] (jin) -- (shui);
+\draw[blue,thick,->] (shui) -- (mu);
+\draw[red,thick,->] (mu) -- (tu);
+\draw[red,thick,->] (tu) -- (shui);
+\draw[red,thick,->] (shui) -- (huo);
+\draw[red,thick,->] (huo) -- (jin);
+\draw[red,thick,->] (jin) -- (mu);
+\node at (90:2.3)   {木 (0)};
+\node at (18:2.4)   {火 (1)};
+\node at (-54:2.4)  {土 (2)};
+\node at (-126:2.4) {金 (3)};
+\node at (162:2.35) {水 (4)};
+\end{tikzpicture}
+\caption{五行排于五边形上。蓝色外圈为相生 $\sigma:x\mapsto x+1$；红色内接星形为相克 $\sigma^2:x\mapsto x+2$。相克就是相生迭代两次（\cref{thm:wuxing}）。}\label{fig:wuxing}
+\end{figure}
+
+\subsection{关系矩阵}
+任意两行 $x,y$ 处于五种关系之一，由其差决定。
+\begin{proposition}\label{prop:relmatrix}
+关系映射 $\mathrm{rel}(x,y)=(y-x)\bmod 5$ 取值于 $\{0,1,2,3,4\}$，对应 \emph{比和/我生/我克/克我/生我}。其矩阵 $M[x][y]=(y-x)\bmod 5$ 是循环矩阵，且对角线外满足 $M[x][y]+M[y][x]\equiv0\pmod 5$。
+\end{proposition}
+\begin{proof}
+$\mathrm{rel}$ 只依赖 $y-x$，故 $M$ 每行是上一行的循环移位：循环矩阵。且 $M[y][x]=(x-y)\equiv-(y-x)\equiv -M[x][y]\pmod 5$，故和为零。这把"我生/生我""我克/克我"编码为互逆对。
+\end{proof}
+
+\begin{table}[h]\centering
+\caption{循环的关系矩阵 $M[x][y]=(y-x)\bmod 5$。条目：$0=$比和，$1=$我生，$2=$我克，$3=$克我，$4=$生我。\label{tab:relmatrix}}
+\small
+\begin{tabular}{c|ccccc}
+ & 木 & 火 & 土 & 金 & 水\\ \hline
+木 & 0 & 1 & 2 & 3 & 4\\
+火 & 4 & 0 & 1 & 2 & 3\\
+土 & 3 & 4 & 0 & 1 & 2\\
+金 & 2 & 3 & 4 & 0 & 1\\
+水 & 1 & 2 & 3 & 4 & 0
+\end{tabular}
+\end{table}
+
+\section{易经：二}\label{sec:yijing}
+
+\subsection{作为域的阴阳}
+《易经》~\cite{zhouyi}的两种爻即 $\F_2$ 的元素：阴爻为 $0$，阳爻为 $1$。$\F_2$ 的加法是异或，恰为"变爻"（阳变阴、阴变阳）。
+\begin{definition}
+\emph{八卦}为 $\F_2^3$ 的向量；\emph{六十四卦}为 $\F_2^6$ 的向量。自下而上的第 $i$ 爻读作 bit $i$，故一卦为整数 $\sum_{i=0}^{5} b_i 2^i\in\{0,\dots,63\}$。
+\end{definition}
+有 $|\F_2^3|=2^3=8$ 卦、$|\F_2^6|=2^6=64$ 卦——数值均正确。把卦等同于二进制数 $0,\dots,63$，正是莱布尼茨三百年前的观察~\cite{leibniz1703}。
+
+\subsection{变卦操作是仿射对合}
+\begin{proposition}[错、综、变]\label{prop:yijing}
+古典的"变卦"操作是 $\F_2$ 仿射映射且为对合：
+\begin{enumerate}[leftmargin=*]
+  \item \emph{变}（变第 $i$ 爻）：$b_i(x)=x\oplus 2^i$；单位向量 $e_i$ 的平移。
+  \item \emph{错卦}（全反）：$c(x)=x\oplus(2^6-1)=x\oplus 63$；全 $1$ 向量的平移。
+  \item \emph{综卦}（爻序反转）：$z(x)$，六位表示的逐位反转；一个 $\F_2$ 线性置换。
+\end{enumerate}
+每个满足 $f\circ f=\mathrm{id}$。且 $\F_2^6\cong\F_2^3\oplus\F_2^3$ 把一卦分解为下卦与上卦。
+\end{proposition}
+\begin{proof}
+平移是仿射；同一平移施用两次加 $2e_i=0$（在 $\F_2$ 中），得恒等。逐位反转是六个坐标 bit 的线性置换且为其自身逆。分解即低三位与高三位。
+\end{proof}
+
+\begin{remark}[易经为何与八字并列]\label{rem:najia}
+尽管卦未被接入四柱排盘映射，两套体系既共享起源（干支历），又在汉代以来有一座显式的桥：\emph{纳甲}法把每一卦赋予一组天干地支，把本节的 $\F_2^3$ 映射到\cref{sec:ganzhi}的 $\Z_{10}$、$\Z_{12}$。此处纳入易经，是作为传统中第三个有限代数系统，与其余二者形式上并列，无论读者是否采纳纳甲之桥。
+\end{remark}
+
+\section{八字状态空间与排盘映射 \texorpdfstring{$\Phi$}{Phi}}\label{sec:bazi}
+
+\subsection{状态空间}
+一\emph{柱}是 $G\cong\Z_{60}$ 的元素（\cref{thm:sexagenary}）。一张\emph{八字盘}是四柱的元组，
+\[
+\text{盘}\;=\;(c_{\text{年}},c_{\text{月}},c_{\text{日}},c_{\text{时}})\in G^4\cong\Z_{60}^4.
+\]
+朴素状态空间有 $60^4\approx 1.3\times10^7$ 点，但我们将看到四柱远非独立。
+
+\subsection{输入与状态；排盘映射}
+设\emph{输入空间} $\mathcal{I}$ 为连续的物理数据（出生时刻、经度、性别），\emph{状态空间} $\mathcal{S}=G^4$（加一个导出序列：\emph{大运}）。\emph{排盘映射}是量化函数
+\[
+\Phi:\mathcal{I}\longrightarrow\mathcal{S}.
+\]
+八字所有常规争议（年从何起、时如何定义）都在 $\Phi$ 之内；$\mathcal{S}$ 的代数无争议。我们逐柱分解 $\Phi$。
+
+\subsubsection*{年柱}
+对公历年 $Y$ 中的出生时刻，年柱为
+\[
+c_{\text{年}}=\big((Y-4)\bmod 10,\,(Y-4)\bmod 12\big),
+\]
+约定年在节气\emph{立春}（二月上旬）递进。常数 $4$ 由要求 $Y=4$ 为甲子所定；\cref{thm:sexagenary}的奇偶约束随之自动成立。
+
+\subsubsection*{月柱：作为仿射映射的五虎遁}
+设出生所在阳历月的支为 $m_b\in\Z_{12}$（由节气决定），年干为 $a\in\Z_{10}$。古典的\emph{五虎遁}给出月干为
+\[
+c_{\text{月}}=\big(\,\big(2(a+1)+m_{\text{pos}}\big)\bmod 10,\;m_b\,\big),\qquad m_{\text{pos}}=(m_b-2)\bmod 12.
+\]
+一个小而悦人的点：映射 $a\mapsto 2(a+1)\bmod 10$ 是\emph{年干上系数为 $2$ 的仿射映射}；因 $\gcd(2,10)=2$，其像恰为偶（阳）干。这就是为何传统中寅月起干总为阳干——一个通常被当作口诀记下的事实，在此被看作奇偶的推论。
+
+\subsubsection*{日柱：闭式}
+日柱每日推进一、永不复位，与年月无关。
+\begin{theorem}[日柱，闭式]\label{thm:daypillar}
+对公历日期 $d$，其儒略日数为 $J(d)$，八字日柱索引（甲子$=0$）为
+\[
+c_{\text{日}}=(J(d)+49)\bmod 60.
+\]
+\end{theorem}
+\begin{proof}
+自商代甲骨文以来，六十甲子纪日连续未断~\cite{needham1959}，故日柱索引每日恰加一并以 $60$ 为周期。这一结构事实已把问题归约为单一剩余：对任一索引已知的参考日 $d_0$（索引 $\iota_0$），
+\[
+\mathrm{index}(d)\equiv \iota_0+\big(J(d)-J(d_0)\big)\pmod{60}.
+\]
+故常数由\emph{单一}锚点即定。取 $d_0=1949\text{-}10\text{-}01$，一个公认的甲子日（$\iota_0=0$），$J(d_0)=2\,433\,191$，得 $c\equiv -J(d_0)\equiv 49\pmod{60}$，公式由此而来。第二个公认的锚点——$1592$-$12$-$31$ 为甲申日（索引 $20$）~\cite{chenshu}——印证此值。（$1582$-$10$-$15$ 之前用儒略历，偏移不同；这不影响现代生辰。）
+\end{proof}
+
+\subsubsection*{时柱：五鼠遁}
+以 $h_b=\big\lfloor(\text{时}+1)/2\big\rfloor\bmod 12$ 给出两小时\emph{时辰}的支（时$\in\{0,\dots,23\}$），$d\in\Z_{10}$ 为日干，\emph{五鼠遁}给出
+\[
+c_{\text{时}}=\big(\,(2d+h_b)\bmod 10,\;h_b\,\big),
+\]
+同样是日干上系数 $2$ 的仿射、同样是阳干像。故两条"遁"法（月之五虎、时之五鼠）是相关干指标上的\emph{同一}映射 $x\mapsto 2x$，仅偏移不同。
+
+\subsection{缩减的自由度}
+\begin{proposition}\label{prop:dof}
+四柱非独立：$c_{\text{月}}$ 由 $c_{\text{年}}$ 与节气决定，$c_{\text{时}}$ 由 $c_{\text{日}}$ 与时辰决定。故真正的输入为 $(Y,\text{节气},\text{日索引},\text{时辰},\text{性别})$。
+\end{proposition}
+
+\subsection{大运}
+由月柱导出一个表示人生各阶段的柱列。其方向是一个奇偶运算。
+\begin{proposition}\label{prop:dayun}
+大运序列顺行（在 $\Z_{60}$ 中前进）当且仅当 $\pi(\text{年干})=\pi(\text{性别})$（约定男$=1$、女$=0$）；否则逆行。起运岁为出生到下一个（顺行）或上一个（逆行）节气的天数除以 $3$。
+\end{proposition}
+
+\section{算子层}\label{sec:operators}
+算子层把一张盘映射到它的"标注"——传统从中读出的关系~\cite{yuanhai}。我证明这些是代数的。
+
+\subsection{十神透过 \texorpdfstring{$\Z_5\times\Z_2$}{Z5xZ2} 分解}
+\begin{proposition}[十神分解]\label{prop:tengod}
+赋予日主 $a$ 与另一干 $b$ 其关系的\emph{十神}映射 $\mathrm{tg}:\Z_{10}\times\Z_{10}\to\{\text{10 类}\}$ 分解为
+\[
+\mathrm{tg}(a,b)=F\big((\tau(b)-\tau(a))\bmod 5,\;\pi(a)=\pi(b)\big),
+\]
+其中 $\tau(a)=\lfloor a/2\rfloor$、$\pi(a)=a\bmod 2$。特别地，它只依赖行差（五类）与奇偶是否相同（两类），恰得 $5\cdot 2=10$ 神。
+\end{proposition}
+\begin{proof}
+满射性：固定 $a=0$，令 $b$ 遍历 $\Z_{10}$，得古典表中十个相异之神（\cref{tab:tengod}）。透过 $(\Z_5,\Z_2)$ 的分解随之即得。
+\end{proof}
+
+\begin{table}[h]\centering
+\caption{以（行差 $d\in\Z_5$，奇偶同否）为索引的十神。"同"为\emph{偏}列，"异"为\emph{正}列。\label{tab:tengod}}
+\small
+\begin{tabular}{c l l l}
+\toprule
+$d\in\Z_5$ & 行关系 & 同奇偶（偏） & 异奇偶（正）\\
+\midrule
+0 & 比和 & 比肩 & 劫财\\
+1 & 我生 & 食神 & 伤官\\
+2 & 我克 & 偏财 & 正财\\
+3 & 克我 & 七杀 & 正官\\
+4 & 生我 & 偏印 & 正印\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{地支关系为对合与陪集分解}
+\begin{theorem}[冲、合、害为对合]\label{thm:involutions}
+三条地支关系是 $\Z_{12}$ 的对合：
+\begin{itemize}[leftmargin=*]
+  \item \emph{冲}（\emph{chong}）：$\chi(b)=b+6$，不变量 $\chi(b)-b\equiv6$；
+  \item \emph{合}（\emph{he}）：$\eta(b)=1-b$，不变量 $b+\eta(b)\equiv1$；
+  \item \emph{害}（\emph{hai}）：$\rho(b)=7-b$，不变量 $b+\rho(b)\equiv7$。
+\end{itemize}
+且 $\chi$ 是 $\Z_{12}$ 上唯一的非平凡平移对合（因 $2d\equiv0\pmod{12}\iff d\in\{0,6\}$），$\eta,\rho$ 为反射 $b\mapsto c-b$。
+\end{theorem}
+\begin{proof}
+直接：$\chi(\chi(b))=b+12=b$；$\eta(\eta(b))=1-(1-b)=b$；$\rho(\rho(b))=7-(7-b)=b$。不变量由定义式读出。
+\end{proof}
+
+\begin{theorem}[三合局为陪集分解]\label{thm:threeharmony}
+子群 $\langle4\rangle=\{0,4,8\}\le\Z_{12}$ 阶为 $3$，其四个陪集恰为古典的四个三合局：
+\[
+\{0,4,8\},\;\{1,5,9\},\;\{2,6,10\},\;\{3,7,11\}.
+\]
+故三合局为商群 $\Z_{12}/\langle4\rangle\cong\Z_4$，一支 $b$ 的归属由 $b\bmod 4$ 读出。
+\end{theorem}
+\begin{proof}
+$\ord(4)=3$，因 $3\cdot4=12\equiv0$ 且无更小正倍数。$\Z_{12}$ 中 $3$ 阶子群的陪集数为 $12/3=4$，每陪集 $3$ 元，为 $r+\{0,4,8\},\;r=0,1,2,3$。如上枚举，与传统三组（申子辰、巳酉丑、寅午戌、亥卯未）吻合。
+\end{proof}
+
+\begin{figure}[h]\centering
+\begin{tikzpicture}[scale=1.2, every node/.style={font=\footnotesize}]
+\def\R{2}
+\foreach \i/\name in {0/子,1/丑,2/寅,3/卯,4/辰,5/巳,6/午,7/未,8/申,9/酉,10/戌,11/亥}{%
+  \coordinate (b\i) at ({90-30*\i}:\R);
+  \node at ({90-30*\i}:2.35) {\name};}
+\foreach \i/\j in {0/6,1/7,2/8,3/9,4/10,5/11} \draw[red,thick] (b\i) -- (b\j);
+\draw[green!55!black, thick] (b0) -- (b4) -- (b8) -- cycle;
+\draw[green!55!black, thick] (b1) -- (b5) -- (b9) -- cycle;
+\draw[green!55!black, thick] (b2) -- (b6) -- (b10) -- cycle;
+\draw[green!55!black, thick] (b3) -- (b7) -- (b11) -- cycle;
+\foreach \i in {0,...,11} \fill (b\i) circle (1.3pt);
+\end{tikzpicture}
+\caption{$\Z_{12}$ 圆上的地支关系。红色直径为六冲 $b\leftrightarrow b{+}6$（唯一的非平凡平移对合，\cref{thm:involutions}）；四个绿色等边三角形为三合陪集 $\{r,r{+}4,r{+}8\}$，即 $\Z_{12}/\langle4\rangle\cong\Z_4$ 的四个元素（\cref{thm:threeharmony}）。}\label{fig:z12}
+\end{figure}
+
+\subsection{地支关系总表}\label{sec:branchtable}
+\cref{tab:branchtable}记录了每一支在五条群运算关系（冲、合、害、三合、三会）下的伙伴；\cref{tab:branchlookup}记录两条非群关系（破、刑）。合起来即 $\Z_{12}$ 的完整算子参考，并使\cref{sec:skeleton}的二分变得可触：上五条由统一公式生成，下两条由临时列表给出。
+
+\begin{table}[h]\centering
+\caption{五条群运算关系的逐支伙伴。三合给陪集（含化神）；三会给连续三元组（含方位）。\label{tab:branchtable}}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{c|c|c|c|c|c|c}
+\toprule
+索引 & 支 & 冲 ($b{+}6$) & 合 ($1{-}b$) & 害 ($7{-}b$) & 三合 & 三会\\
+\midrule
+0 & 子 & 午 & 丑 & 未 & 子·辰·申（水） & 亥·子·丑（北）\\
+1 & 丑 & 未 & 子 & 午 & 丑·巳·酉（金） & 亥·子·丑（北）\\
+2 & 寅 & 申 & 亥 & 巳 & 寅·午·戌（火） & 寅·卯·辰（东）\\
+3 & 卯 & 酉 & 戌 & 辰 & 卯·未·亥（木） & 寅·卯·辰（东）\\
+4 & 辰 & 戌 & 酉 & 卯 & 子·辰·申（水） & 寅·卯·辰（东）\\
+5 & 巳 & 亥 & 申 & 寅 & 丑·巳·酉（金） & 巳·午·未（南）\\
+6 & 午 & 子 & 未 & 丑 & 寅·午·戌（火） & 巳·午·未（南）\\
+7 & 未 & 丑 & 午 & 子 & 卯·未·亥（木） & 巳·午·未（南）\\
+8 & 申 & 寅 & 巳 & 亥 & 子·辰·申（水） & 申·酉·戌（西）\\
+9 & 酉 & 卯 & 辰 & 戌 & 丑·巳·酉（金） & 申·酉·戌（西）\\
+10& 戌 & 辰 & 卯 & 酉 & 寅·午·戌（火） & 申·酉·戌（西）\\
+11& 亥 & 巳 & 寅 & 申 & 卯·未·亥（木） & 亥·子·丑（北）\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\begin{table}[h]\centering
+\caption{$\Z_{12}$ 上两条非群关系，以列表给出。\label{tab:branchlookup}}
+\small
+\begin{tabular}{l|l}
+\toprule
+关系 & 成员\\
+\midrule
+破（\emph{po}） & 子--酉、\; 丑--辰、\; 寅--亥、\; 卯--午、\; 巳--申、\; 未--戌\\
+刑（\emph{xing}） & 寅$\to$巳$\to$申$\to$寅；\; 丑$\to$戌$\to$未$\to$丑；\; 子$\leftrightarrow$卯；\; 自刑：辰、午、酉、亥\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{不适配者：刑、破、纳音}\label{sec:nonfit}
+三个算子族抗拒群运算表达，我明确记录，以使\cref{sec:skeleton}的对比具体化。\emph{刑}（\emph{xing}）是 $\Z_{12}$ 上混合三种形状的有向图：有向三角 $2\to5\to8\to2$、另一 $1\to10\to7\to1$、互对 $0\leftrightarrow3$、四个不动点 $4,6,9,11$；三角内的步型为 $(+3,+3,+6)$，并非单一群不变量。\emph{破}（\emph{po}）是六无序对 $\{0,9\},\{1,4\},\{2,11\},\{3,6\},\{5,8\},\{7,10\}$，差恒为 $\pm3$ 但无统一符号规则，故不来自陪集。\emph{纳音}由外部 $30$ 项表（每项管两相邻配对）给六十对之一行；其行序列不是 $k$ 模任何小整数的剩余，必须查表。三者皆非同态、对合或陪集分解。
+
+\subsection{运柱}
+\cref{prop:vacancy}的空亡与\cref{prop:dayun}的大运为算子层收尾：两者都是 $\Z_{60}$ 上的群运算，分别由日索引与月柱算出。
+
+\section{一个生日，被计算}\label{sec:example}
+为使排盘映射 $\Phi$ 具体，我们将其端到端应用。考虑一男，$1984$-$02$-$15$ 正午出生。
+
+\paragraph{年柱。} 出生在立春之后，故 $Y=1984$，$c_{\text{年}}=((1984-4)\bmod10,(1984-4)\bmod12)=(0,0)$：甲子。
+
+\paragraph{月柱。} 该日处于阳历寅月（$m_b=2$）。年干 $a=0$，五虎遁给月干 $2(0+1)+((2-2)\bmod12)=2$：丙寅。注意起干为阳，恰如系数 $2$ 所保证。
+
+\paragraph{日柱。} 由\cref{thm:daypillar}，$(\mathrm{JDN}(1984\text{-}02\text{-}15)+49)\bmod60=15$，即 $(5,3)$：己卯。
+
+\paragraph{时柱。} 正午给 $h_b=\lfloor(12+1)/2\rfloor\bmod12=6$（午）。日干 $d=5$，五鼠遁给 $(2\cdot5+6)\bmod10=6$：庚午。
+
+故此盘为
+\[
+\text{甲子}\;/\;\text{丙寅}\;/\;\text{己卯}\;/\;\text{庚午}.
+\]
+日主为己（阴土）。两个算子足以示例此层。年干甲相对日主的十神，由\cref{prop:tengod}，为 $(\tau(0)-\tau(5))\bmod5=(0-2)\bmod5=3$（"克我"），奇偶相异（甲阳己阴），故为\emph{正官}。日索引 $15$ 的空亡，旬首 $h=15-(15\bmod10)=10$，由\cref{prop:vacancy}空亡地支为 $\{8,9\}$（申、酉）。
+
+最后，大运（\cref{prop:dayun}）顺行，因年干甲为阳、本造为男（$1=1$）；序列自月柱丙寅前进一开起：丁卯、戊辰、己巳、庚午、辛未、$\dots$，$6$ 岁起运。本例每一行都是某个群运算的输出；无一需要查阅文本传统。
+
+\section{骨架与装饰}\label{sec:skeleton}
+\cref{sec:operators}一个接一个的定理断言某传统关系\emph{就是}一个群运算。\cref{sec:nonfit}收集了那些不是的。两张表并非任意：它们与一个关于该传统的社会学事实相吻合。
+
+\begin{table}[h]\centering
+\caption{骨架与装饰。能写成群运算的关系，恰是各派无争议的部分；其余恰是被争执的部分。\label{tab:skel}}
+\small
+\begin{tabular}{l l l}
+\toprule
+关系 & 代数身份 & 争议\\
+\midrule
+六十甲子（$G\cong\Z_{60}$） & 子群，循环生成 & 无\\
+相生/相克（$C_5$） & 一循环之幂 & 无\\
+冲 / 合 / 害 & 对合 & 无\\
+三合 & $\langle4\rangle\cong\Z_4$ 的陪集 & 无\\
+三会 & 连续三元组 & 无\\
+十神 & 透过 $\Z_5\times\Z_2$ 分解 & 无\\
+日柱 & 闭式 $(\mathrm{JDN}+49)\bmod60$ & 无\\ \midrule
+刑（\emph{xing}） & 有向图（非群运算） & 有争议\\
+破（\emph{po}） & 六对（非群运算） & 有争议\\
+纳音行 & 外部 $30$ 项查表 & 有争议\\
+具体流派的诠释 & 经验断言 & 激烈争议\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+我们可如此读\cref{tab:skel}，但这并非一个静态的二分，而是更尖锐的一点。换一个时间维度来看，它升级为一条传统自身历史所印证的判断：几个世纪中，那些缺乏代数强制的关系，把\emph{主流让位}给了具备代数强制的关系~\cite{smith1991,yuanhai,sanming}。最清楚的例子是纳音——它是唐代禄命法（与李虚中相关的一系）的核心；而后来宋以降的子平法改用十神与正五行论命并夺得主流，纳音退居装饰，正五行与十神成为骨架。值得注意的是，子平所倚仗的，恰好就是上文那些群论关系（五行的 $C_5$、十神的 $\Z_5\times\Z_2$）。这也不是巧合：被代数强制的关系自洽、易记、可检验，因而在口耳与抄写传递中保持不变；任意的查表无所依凭，在不同抄本与师承间漂移，直至失去权威。当一条关系被代数强制，没有哪个流派能自洽地反对，事实上也没有谁反对；当它是外部强加，传统便如实分裂。是结构、而非口味，决定了八字的哪些部分会硬化为正典，哪些一直停留在装饰。
+
+我认为这是形式化最有用的单项贡献。它不告诉任何人是否该信八字，但它的确精确地告诉他们：自己将要承诺的是什么——一个最小、无争议、群论的骨架，加上一种装饰性覆盖的选择。那些耗费数世纪于文本训诂的争论，可以被迁回其真正的归属——底层群运算的有无。
+
+随之而来的第二项方法论收益：因骨架已被钉在代数上，八字任何\emph{经验}断言（"此格局致彼性情"）都能作为盘的函数无歧义地陈述，并交给统计学。装饰可被替换、细化或抛弃而不触碰骨架。形式化在这个意义上是一个为可证伪性准备的接口。我并非没有注意到本文自身也遵守同一纪律：其定理是骨架，其注释是装饰。
+
+\section{实现}\label{sec:impl}
+整套形式化以纯函数库 \texttt{cbcm-core} 实现，约五百行 Python。本文每个对象——$\Z_{10},\Z_{12},\Z_{60},\Z_5,\F_2^3,\F_2^6$——都是一个模块；每条定理都被编码为一个属性测试，定理不成立则测试失败。例包括：对所有 $x$ 成立 $\ke=\sigma^2$；冲/合/害皆为对合；三合陪集划分 $\Z_{12}$；十神映射恰十值。
+
+两项来自实现的观察值得记录。其一，属性测试实际上是定理的机器检验版：代数中的一个 bug 就是一条失败的定理。其二，排盘映射 $\Phi$ 被端到端交叉验证于独立库 \texttt{lunar\_python}（v1.4，一个被广泛使用的传统历法实现），用了 $300$ 个在 $1960$--$2030$ 年间均匀随机抽取的出生日期，逐柱（四柱全部）比对；全部吻合。此举在开发中抓出两个真实错误，皆有教益：月干在立春前的子、丑两月错了一个循环（漏了月位置的 $\bmod 12$ 归约）；日柱对 $23$ 点出生提前了一天（日柱应随民用历，仅时干在 $23$ 点借用次日干）。我认为这是形式化纪律的一个小广告：没有代数就写不出这些测试，而它们定位的恰是传统以口耳相传、因而不一致的那类边界错误。
+
+库与复现交叉验证的脚本已公开。\footnote{\url{https://github.com/Shukahub/cbcm-Chinese-Birth-Chart-2-Math}}
+
+\section{结论}\label{sec:conclusion}
+我已证明，中国命理的主要装置——干支、五行、卦、四柱及其算子关系——忠实地翻译为初等有限代数：循环群、商群、陪集分解、域向量空间，以及少数仿射映射与对合。翻译是无损的（每条传统规则都成为精确的代数命题），也是忠实的（如此表达的关系，恰是传统自身从不争议的结构性关系）。
+
+有一个最终的对称值得命名。形式化一个传统，归根结底就是观察一种规律并为之发明名字——这恰是三千年前干支的发明者所做的事。在这个意义上，代数学家与占算者并不处于问题的两边；他们是同一组规律的两类读者，被记号与数千年中间词汇所隔开。本文与其说是替换传统语言，不如说是恢复其下那部分一向就是数学的东西。
+
+我回到起点。形式化八字的逻辑不等于验证其预测。我没有提出任何经验断言，也不提供任何。这层翻译所提供的，是任何诚实经验探究的前提：一种固定、无歧义的语言，在其中八字的预测可被陈述、可从遮蔽它们的装饰中分离、并且——若有人愿意——可被检验。科学配方第三步是否成功，是统计学的问题，不是代数的问题。我只是递交一种足够精确、使问题得以被提出的语言。
+
+\bigskip
+\noindent\textbf{致谢。} 本文的概念种子，是"观察、形式化、检验"乃一份配方、其各步可独立施行这一观察；本文只取其中间那一步。
+
+\clearpage
+\appendix
+
+\section{六十甲子}\label{app:ganzhi}
+完整的六十甲子循环（\cref{thm:sexagenary}），索引 $k=0,\dots,59$，甲子$=0$、癸亥$=59$。每项为配对 $(k\bmod 10,\,k\bmod 12)$；奇偶自动匹配。
+
+\begin{center}\footnotesize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
+\hline
+0 甲子 & 1 乙丑 & 2 丙寅 & 3 丁卯 & 4 戊辰 & 5 己巳 & 6 庚午 & 7 辛未 & 8 壬申 & 9 癸酉\\ \hline
+10 甲戌 & 11 乙亥 & 12 丙子 & 13 丁丑 & 14 戊寅 & 15 己卯 & 16 庚辰 & 17 辛巳 & 18 壬午 & 19 癸未\\ \hline
+20 甲申 & 21 乙酉 & 22 丙戌 & 23 丁亥 & 24 戊子 & 25 己丑 & 26 庚寅 & 27 辛卯 & 28 壬辰 & 29 癸巳\\ \hline
+30 甲午 & 31 乙未 & 32 丙申 & 33 丁酉 & 34 戊戌 & 35 己亥 & 36 庚子 & 37 辛丑 & 38 壬寅 & 39 癸卯\\ \hline
+40 甲辰 & 41 乙巳 & 42 丙午 & 43 丁未 & 44 戊申 & 45 己酉 & 46 庚戌 & 47 辛亥 & 48 壬子 & 49 癸丑\\ \hline
+50 甲寅 & 51 乙卯 & 52 丙辰 & 53 丁巳 & 54 戊午 & 55 己未 & 56 庚申 & 57 辛酉 & 58 壬戌 & 59 癸亥\\ \hline
+\end{tabular}}
+\end{center}
+
+六行对应\cref{prop:vacancy}的六旬；每行以干甲开头，六个开头索引 $\{0,10,20,30,40,50\}$ 构成子群 $\langle10\rangle\cong\Z_6$。
+
+\section{三十纳音}\label{app:nayin}
+\cref{sec:nonfit}纳音指派的完整表。三十项每项管两相邻干支（$k$ 列）；右列给化神行。其行序列不是 $k$ 模任何小整数的剩余，这正是纳音抗拒群运算表达、必须查表的代数原因。
+
+\begin{center}\footnotesize
+\begin{tabular}{c|l|c||c|l|c}
+\hline
+$k$ & 纳音 & 行 & $k$ & 纳音 & 行\\ \hline
+0--1   & 海中金 & 金 & 30--31 & 砂石金 & 金\\
+2--3   & 炉中火 & 火 & 32--33 & 山下火 & 火\\
+4--5   & 大林木 & 木 & 34--35 & 平地木 & 木\\
+6--7   & 路旁土 & 土 & 36--37 & 壁上土 & 土\\
+8--9   & 剑锋金 & 金 & 38--39 & 金箔金 & 金\\
+10--11 & 山头火 & 火 & 40--41 & 覆灯火 & 火\\
+12--13 & 涧下水 & 水 & 42--43 & 天河水 & 水\\
+14--15 & 城头土 & 土 & 44--45 & 大驿土 & 土\\
+16--17 & 白蜡金 & 金 & 46--47 & 钗钏金 & 金\\
+18--19 & 杨柳木 & 木 & 48--49 & 桑柘木 & 木\\
+20--21 & 泉中水 & 水 & 50--51 & 大溪水 & 水\\
+22--23 & 屋上土 & 土 & 52--53 & 沙中土 & 土\\
+24--25 & 霹雳火 & 火 & 54--55 & 天上火 & 火\\
+26--27 & 松柏木 & 木 & 56--57 & 石榴木 & 木\\
+28--29 & 长流水 & 水 & 58--59 & 大海水 & 水\\ \hline
+\end{tabular}
+\end{center}
+
+\clearpage
+\begin{thebibliography}{9}
+\bibitem{leibniz1703} G.\,W.~Leibniz, ``Explication de l'arithm\'etique binaire,'' \emph{M\'emoires de l'Acad\'emie Royale des Sciences}, 1703.
+\bibitem{hongfan} 《尚书·洪范》；五行说的经典出处。
+\bibitem{zhouyi} 《周易》；尤见《系辞传》论太极生两仪、四象、八卦。
+\bibitem{smith2008} R.\,J.~Smith, \emph{Fathoming the Cosmos and Ordering the World}, University of Virginia Press, 2008.
+\bibitem{needham1959} J.~Needham, \emph{Science and Civilisation in China}, vol.\ III, Cambridge University Press, 1959.
+\bibitem{dershowitz} E.~Dershowitz and N.~Reingold, \emph{Calendrical Calculations}, Cambridge University Press.
+\bibitem{smith1991} R.\,J.~Smith, \emph{Fortune-tellers and Philosophers: Divination in Traditional Chinese Society}, Westview Press, 1991.
+\bibitem{yuanhai} 《渊海子平》，明代汇编之宋代子平一系文献。
+\bibitem{sanming} 万民英《三命通会》，明代；集大成汇编，保留大量早期禄命材料。
+\bibitem{chenshu} 陈垣，《二十史朔闰表》，1926；中华书局重印。（标准历史日期索引；用于验证\cref{thm:daypillar}的日柱锚点。）
+\bibitem{dummitfoote} D.~Dummit and R.~Foote, \emph{Abstract Algebra}, 3rd ed., Wiley, 2004.
+\end{thebibliography}
+
+\end{document}

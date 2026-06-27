@@ -1,0 +1,17 @@
+[project]
+name = "cbcm-app-personality"
+version = "0.1.0"
+description = "性格应用库：调用 cbcm-core，把命盘状态映射成性格/情志画像（消费者，含经验断言）"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["cbcm-core"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cbcm_personality"]
+
+[project.scripts]
+cbcm-personality = "cbcm_personality.__main__:main"

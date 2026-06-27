@@ -1,0 +1,27 @@
+[project]
+name = "chinesebirthchart2math"
+version = "0.1.0"
+description = "把中国传统生辰八字/天干地支/五行/易经翻译成代数语言（monorepo workspace 根）"
+readme = "docs/README.md"
+requires-python = ">=3.11"
+dependencies = ["cbcm-core", "cbcm-app-personality", "cbcm-app-compatibility", "cbcm-app-dateselect"]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+cbcm-core = { workspace = true }
+cbcm-app-personality = { workspace = true }
+cbcm-app-compatibility = { workspace = true }
+cbcm-app-dateselect = { workspace = true }
+
+[dependency-groups]
+dev = ["pytest>=8.0", "lunar_python>=1.4"]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "packages/cbcm-core/tests",
+    "packages/app-personality/tests",
+    "packages/app-compatibility/tests",
+    "packages/app-dateselect/tests",
+]

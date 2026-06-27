@@ -1,0 +1,20 @@
+# 合婚输入示例：[person_a] / [person_b] 为两人生辰，[convention] 可选
+
+[person_a]
+year = 1984
+month = 2
+day = 15
+hour = 12
+minute = 0
+gender = "男"
+
+[person_b]
+year = 1986
+month = 7
+day = 20
+hour = 8
+minute = 0
+gender = "女"
+
+[convention]
+year_boundary = "lichun"

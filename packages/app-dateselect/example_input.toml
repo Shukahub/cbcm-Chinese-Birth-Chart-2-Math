@@ -1,0 +1,19 @@
+# 择日输入示例
+# [anchor] 当事人生辰（用于避开冲刑、寻三合六合）
+# [range]  待选年月
+# [options] top_n 显示前几名
+
+[anchor]
+year = 1984
+month = 2
+day = 15
+hour = 12
+minute = 0
+gender = "男"
+
+[range]
+year = 2026
+month = 6
+
+[options]
+top_n = 5

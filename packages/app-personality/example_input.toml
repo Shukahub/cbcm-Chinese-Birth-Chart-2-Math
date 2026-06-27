@@ -1,0 +1,18 @@
+# 性格应用输入示例
+# [birth] 段：核心 schema（BirthInput）
+# [convention] 段：排盘约定开关（Convention，可选，缺省用默认）
+
+[birth]
+year = 1984
+month = 2
+day = 15
+hour = 12
+minute = 0
+longitude = 116.4   # 北京经度；true_solar_time=true 时用于真太阳时修正
+gender = "男"
+
+[convention]
+year_boundary = "lichun"      # 立春为年界
+true_solar_time = false       # 不做真太阳时修正
+zi_hour_crossday = true       # 23:00 后算次日
+solar_term_precision = "approximate"  # 用近似节气（骨架级精度）
